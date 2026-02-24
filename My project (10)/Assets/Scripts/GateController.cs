@@ -1,0 +1,36 @@
+using UnityEngine;
+
+// , IInteractable을 추가해서 상호작용이 가능하다고 유니티에 알려줍니다.
+public class GateController : MonoBehaviour, IInteractable
+{
+    public float openAngle = 90f;
+    public float speed = 3f;
+    private bool isOpen = false;
+    private Quaternion closedRotation;
+    private Quaternion openRotation;
+
+    void Start()
+    {
+        closedRotation = transform.localRotation;
+        openRotation = Quaternion.Euler(0, openAngle, 0) * closedRotation;
+    }
+
+    void Update()
+    {
+        Quaternion target = isOpen ? openRotation : closedRotation;
+        transform.localRotation = Quaternion.Slerp(transform.localRotation, target, Time.deltaTime * speed);
+    }
+
+    // IInteractable 규칙에 따라 'Interact' 함수를 만들어줍니다.
+    // 플레이어가 E를 누르면 이 함수가 실행됩니다.
+    public void Interact()
+    {
+        ToggleGate();
+    }
+
+    public void ToggleGate()
+    {
+        isOpen = !isOpen;
+        Debug.Log(isOpen ? "울타리가 열립니다." : "울타리가 닫힙니다.");
+    }
+}
