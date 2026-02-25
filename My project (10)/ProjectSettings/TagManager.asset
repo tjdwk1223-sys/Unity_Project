@@ -6,6 +6,9 @@ TagManager:
   tags:
   - Enemy
   - Wooden Sword
+  - NPC
+  - Boss
+  - UI
   layers:
   - Default
   - TransparentFX
@@ -18,8 +21,8 @@ TagManager:
   - Wooden Sword
   - NPC
   - Nospawn
-  - 
-  - 
+  - Boss
+  - SafeWall
   - 
   - 
   - 

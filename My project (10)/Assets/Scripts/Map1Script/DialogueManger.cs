@@ -9,7 +9,13 @@ public class DialogueManager : MonoBehaviour
 
     [Header("게임 시작 시 자동 출력될 대사")]
     [TextArea(2, 5)]
-    public string[] openingSentences; // 여기에 오프닝 대사를 적습니다.
+    // ★ 유니티 인스펙터가 꼬이든 말든 무조건 이 대사가 먼저 뜨도록 코드에 고정했습니다!
+    public string[] openingSentences = new string[] {
+        "어느날 눈을떳는대 갑자기 이곳에 떨어졋다",
+        "이목검은 뭐지?? 나는검은 처음써보는대",
+        "어저기 빛이보이내 저쪽으로가볼까 ?",
+        "아저기 돌도한번 봐야겠다 신기하게 생겻네"
+    };
 
     private string[] currentSentences;
     private int currentSentenceIndex = 0;
@@ -19,7 +25,7 @@ public class DialogueManager : MonoBehaviour
 
     void Start()
     {
-        // 게임 시작 시 openingSentences에 적힌 내용이 있다면 바로 재생!
+        // 게임 시작 시 코드로 박아둔 대사가 무조건 재생됩니다!
         if (openingSentences != null && openingSentences.Length > 0)
         {
             StartDialogue(openingSentences);
@@ -32,6 +38,7 @@ public class DialogueManager : MonoBehaviour
 
     void Update()
     {
+        // 마우스 클릭이나 스페이스바로 넘기기
         if (isDialogueActive && (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space)))
         {
             NextSentence();

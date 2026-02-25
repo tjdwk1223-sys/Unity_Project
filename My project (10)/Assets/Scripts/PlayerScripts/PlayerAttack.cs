@@ -4,6 +4,8 @@ using System.Collections.Generic;
 
 public class PlayerAttack : MonoBehaviour
 {
+    [Header("--- 대미지 텍스트 ---")]
+    public GameObject damageTextPrefab; // 여기에 DamageText 프리팹을 드래그하세요.
     [Header("--- 검기 설정 ---")]
     public bool hasSwordAura = false;
     public GameObject auraPrefab;

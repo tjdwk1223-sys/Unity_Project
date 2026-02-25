@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 8863490829336004629}
   - component: {fileID: 6276068618421883237}
   - component: {fileID: 5258003707279367073}
+  - component: {fileID: 520237313353086384}
   m_Layer: 0
   m_Name: Procedural Portal Effect
   m_TagString: Untagged
@@ -118,4 +119,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: edd6a90e738333d4b825157071ad6759, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetSceneName: Map2
+  interactUI: {fileID: 0}
+--- !u!114 &520237313353086384
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3955808756769843235}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 028a6e0dac85e994aa43e7d7d6579091, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  interactUI: {fileID: 0}
