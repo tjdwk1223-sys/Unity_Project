@@ -1795,6 +1795,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4bbee1313e053b9499aec47b0eb92e75, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  damageTextPrefab: {fileID: 46160688752563479, guid: 625fcbd011d82f242bc2962b38aee04d, type: 3}
   stats: {fileID: 11400000, guid: 5042c65d2d585ca4995612fd4b9d2188, type: 2}
   currentHp: 0
   player: {fileID: 0}

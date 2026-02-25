@@ -3,33 +3,9 @@ using UnityEngine.AI;
 
 public class ZombieController : MonoBehaviour
 {
-    // ZombieController.cs 내부 수정
-
     [Header("대미지 텍스트 설정")]
     public GameObject damageTextPrefab; // 여기에 DamageText 프리팹 연결
 
-    // (기존 코드 생략...)
-
-    // TakeDamage 함수를 대미지와 크리티컬 여부를 둘 다 받도록 수정합니다.
-    public void TakeDamage(int damageAmount, bool isCrit = false)
-    {
-        if (currentHp <= 0) return;
-
-        currentHp -= damageAmount;
-
-        // 💡 여기서 대미지 텍스트를 생성합니다!
-        if (damageTextPrefab != null)
-        {
-            Vector3 spawnPos = transform.position + Vector3.up * 2.0f;
-            GameObject textObj = Instantiate(damageTextPrefab, spawnPos, Quaternion.identity);
-            textObj.GetComponent<DamageText>().Setup(damageAmount, isCrit);
-        }
-
-        detectRange = 50f;
-
-        if (currentHp <= 0) Die();
-        else OnHit();
-    }
     [Header("★ 능력치 데이터 연결")]
     public CharacterStats stats;
 
@@ -38,8 +14,8 @@ public class ZombieController : MonoBehaviour
 
     [Header("기타 설정")]
     public Transform player;
-    public float detectRange = 20.0f; // ★ 탐지 범위를 20으로 늘렸습니다.
-    public float hitDuration = 0.5f; // ★ 경직 시간을 0.5초로 줄여 더 빠릿하게 만듭니다.
+    public float detectRange = 20.0f;
+    public float hitDuration = 0.5f;
     public float destroyDelay = 5.0f;
 
     private bool isHit = false;
@@ -55,11 +31,16 @@ public class ZombieController : MonoBehaviour
         anim = GetComponent<Animator>();
         startPosition = transform.position;
 
+        // ★ [해결 코드] 추적 시 땅에 박히는 원인(Root Motion)을 코드로 아예 꺼버립니다.
+        if (anim != null)
+        {
+            anim.applyRootMotion = false;
+        }
+
         if (stats != null)
         {
             currentHp = stats.maxHp;
             agent.speed = stats.moveSpeed;
-            // ★ 사거리만큼 멈추도록 설정
             agent.stoppingDistance = stats.attackRange;
         }
         else currentHp = 100;
@@ -90,11 +71,11 @@ public class ZombieController : MonoBehaviour
         }
         else if (distance <= detectRange)
         {
-            ChasePlayer(); // ★ 추격 모드
+            ChasePlayer(); // 추격 모드
         }
         else
         {
-            ReturnToIdle(); // ★ 복귀 모드
+            ReturnToIdle(); // 복귀 모드
         }
     }
 
@@ -102,7 +83,7 @@ public class ZombieController : MonoBehaviour
     {
         if (agent.pathStatus == NavMeshPathStatus.PathInvalid) return;
 
-        agent.isStopped = false; // ★ 정지 해제 필수!
+        agent.isStopped = false; // 정지 해제 필수!
         agent.speed = (stats != null) ? stats.moveSpeed : 3.5f;
         agent.SetDestination(player.position);
 
@@ -159,13 +140,27 @@ public class ZombieController : MonoBehaviour
 
     void EndHit() { if (currentHp > 0) isHit = false; }
 
-    public void TakeDamage(int damageAmount)
+    // ★ [통합 코드] 중복되어 있던 TakeDamage 함수를 하나로 깔끔하게 합쳤습니다.
+    public void TakeDamage(int damageAmount, bool isCrit = false)
     {
         if (currentHp <= 0) return;
-        currentHp -= damageAmount;
 
-        // ★ 이 줄이 추가되었습니다. 유니티 하단 Console 창에 정보를 출력합니다.
+        currentHp -= damageAmount;
         Debug.Log($"{gameObject.name}이(가) {damageAmount}의 대미지를 입었습니다. 남은 체력: {currentHp}");
+
+        // 대미지 텍스트 띄우기
+        if (damageTextPrefab != null)
+        {
+            Vector3 spawnPos = transform.position + Vector3.up * 2.0f;
+            GameObject textObj = Instantiate(damageTextPrefab, spawnPos, Quaternion.identity);
+
+            // DamageText 컴포넌트가 있을 경우에만 실행되도록 방어 코드 추가
+            DamageText dt = textObj.GetComponent<DamageText>();
+            if (dt != null)
+            {
+                dt.Setup(damageAmount, isCrit);
+            }
+        }
 
         // 피격 시 즉시 추격하도록 설정 (반격)
         detectRange = 50f;
