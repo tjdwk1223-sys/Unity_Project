@@ -9,7 +9,6 @@ public class DialogueManager : MonoBehaviour
 
     [Header("게임 시작 시 자동 출력될 대사")]
     [TextArea(2, 5)]
-    // ★ 유니티 인스펙터가 꼬이든 말든 무조건 이 대사가 먼저 뜨도록 코드에 고정했습니다!
     public string[] openingSentences = new string[] {
         "어느날 눈을떳는대 갑자기 이곳에 떨어졋다",
         "이목검은 뭐지?? 나는검은 처음써보는대",
@@ -21,11 +20,13 @@ public class DialogueManager : MonoBehaviour
     private int currentSentenceIndex = 0;
     public float typingSpeed = 0.05f;
     private bool isTyping = false;
-    private bool isDialogueActive = false;
+    public bool isDialogueActive = false;
+
+    // ★ [막타 방어] 대화가 시작된 '그 순간'의 프레임을 기억합니다.
+    private int startFrame = -1;
 
     void Start()
     {
-        // 게임 시작 시 코드로 박아둔 대사가 무조건 재생됩니다!
         if (openingSentences != null && openingSentences.Length > 0)
         {
             StartDialogue(openingSentences);
@@ -38,15 +39,22 @@ public class DialogueManager : MonoBehaviour
 
     void Update()
     {
-        // 마우스 클릭이나 스페이스바로 넘기기
-        if (isDialogueActive && (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space)))
+        // ★ [수정] 대화가 시작된 '그 프레임(startFrame)'에는 E키가 눌려도 넘기지 않습니다.
+        // 이렇게 해야 매직스톤의 E와 매니저의 E가 겹치지 않습니다.
+        if (isDialogueActive && Time.frameCount > startFrame)
         {
-            NextSentence();
+            if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.E))
+            {
+                NextSentence();
+            }
         }
     }
 
     public void StartDialogue(string[] newSentences)
     {
+        // 대화 시작 시 현재 프레임 번호를 딱 찍어둡니다.
+        startFrame = Time.frameCount;
+
         currentSentences = newSentences;
         currentSentenceIndex = 0;
         dialoguePanel.SetActive(true);

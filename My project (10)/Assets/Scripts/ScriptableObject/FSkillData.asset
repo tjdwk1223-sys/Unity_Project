@@ -9,11 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1130c69fae90a574bbb145b435c9892d, type: 3}
-  m_Name: KikiStats
+  m_Script: {fileID: 11500000, guid: 09dae2b1b9afe5e43ba0ad82093c4261, type: 3}
+  m_Name: FSkillData
   m_EditorClassIdentifier: 
-  maxHp: 200
-  damage: 20
-  moveSpeed: 5
-  attackSpeed: 1
-  attackRange: 2
+  skillName: 
+  minDamage: 10
+  maxDamage: 20
+  critChance: 20
+  critMultiplier: 2

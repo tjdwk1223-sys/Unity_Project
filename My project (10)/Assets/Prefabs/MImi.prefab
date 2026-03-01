@@ -474,7 +474,7 @@ MonoBehaviour:
   killCountText: {fileID: 0}
   currentHp: 100
   isAttacking: 0
-  isQuestActive: 0
+  questState: 0
   zombieKillCount: 0
 --- !u!1 &1694388104871626411
 GameObject:

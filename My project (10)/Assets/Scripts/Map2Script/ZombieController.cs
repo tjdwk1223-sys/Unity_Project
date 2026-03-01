@@ -63,6 +63,11 @@ public class ZombieController : MonoBehaviour
 
         if (distance <= attackRange)
         {
+            // ★ [수정된 부분] 사거리 안에 들어오면 일단 멈추고 애니메이션을 끕니다! (대기 상태로 전환)
+            agent.isStopped = true;
+            anim.SetBool("isRunning", false);
+            anim.SetBool("isWalking", false);
+
             float cooldown = (stats != null) ? stats.AttackCooldown : 1.0f;
             if (Time.time >= lastAttackTime + cooldown)
             {
@@ -80,18 +85,20 @@ public class ZombieController : MonoBehaviour
         }
     }
 
-    // ★ 새롭게 추가된 순찰 로직
-    // Wander 함수 내부의 목적지 설정 부분을 이렇게 바꿔주세요!
+    // ★ [수정된 부분] Wander 함수 전체 교체
     void Wander()
     {
         timer += Time.deltaTime;
 
+        // (안전장치) 에이전트가 내비메시 위에 정상적으로 올라가 있을 때만 실행
+        if (!agent.isOnNavMesh) return;
+
         if (timer >= wanderTimer || agent.remainingDistance <= 0.2f)
         {
-            Vector3 newPos = RandomNavSphere(startPosition, wanderRadius, -1);
+            Vector3 newPos;
 
-            // ★ [해결 코드] 목적지가 무한대(Infinity)가 아닐 때만 이동 명령을 내립니다.
-            if (newPos != Vector3.positiveInfinity && newPos != Vector3.negativeInfinity)
+            // 유효한 목적지를 찾는 데 성공했을 때만 이동 명령을 내립니다.
+            if (RandomNavSphere(startPosition, wanderRadius, -1, out newPos))
             {
                 agent.SetDestination(newPos);
             }
@@ -106,14 +113,24 @@ public class ZombieController : MonoBehaviour
         anim.SetBool("isRunning", false);
     }
 
-    // NavMesh 위에서 랜덤한 목적지를 찾아주는 함수
-    public static Vector3 RandomNavSphere(Vector3 origin, float dist, int layermask)
+    // ★ [수정된 부분] RandomNavSphere 함수 전체 교체
+    // NavMesh 위에서 랜덤한 목적지를 찾아 성공 여부를 반환해 주는 함수
+    public static bool RandomNavSphere(Vector3 origin, float dist, int layermask, out Vector3 result)
     {
         Vector3 randDirection = Random.insideUnitSphere * dist;
         randDirection += origin;
         NavMeshHit navHit;
-        NavMesh.SamplePosition(randDirection, out navHit, dist, layermask);
-        return navHit.position;
+
+        // SamplePosition이 갈 수 있는 위치를 찾아 성공(true)했을 때만 좌표 반환
+        if (NavMesh.SamplePosition(randDirection, out navHit, dist, layermask))
+        {
+            result = navHit.position;
+            return true;
+        }
+
+        // 실패했을 경우
+        result = Vector3.zero;
+        return false;
     }
 
     void ChasePlayer()
@@ -172,7 +189,7 @@ public class ZombieController : MonoBehaviour
         agent.velocity = Vector3.zero;
 
         anim.SetTrigger("GetHit");
-        transform.Translate(Vector3.back * 0.3f);
+        // transform.Translate(Vector3.back * 0.3f);
         Invoke("EndHit", hitDuration);
     }
 
@@ -187,9 +204,43 @@ public class ZombieController : MonoBehaviour
         GetComponent<Collider>().enabled = false;
 
         MimiNPC mimi = FindObjectOfType<MimiNPC>();
-        if (mimi != null && mimi.isQuestActive) mimi.zombieKillCount++;
+        // 미미가 퀘스트 중(상태가 1)일 때만 카운트를 올린다
+        if (mimi != null && mimi.questState == 1)
+        {
+            mimi.zombieKillCount++;
+        }
 
         this.enabled = false;
         Destroy(gameObject, destroyDelay);
+    }
+
+    // =========================================================================
+    // ★ [새로 추가된 애니메이션 이벤트 함수] 
+    // 좀비가 손을 뻗어 때리는 정확한 타이밍에 이 함수를 실행할 겁니다!
+    // =========================================================================
+    // =========================================================================
+    // ★ [수정됨] 파라미터(Float)를 받는 애니메이션 이벤트 함수
+    // multiplier 파라미터에 1을 넣으면 100% 대미지, 1.5를 넣으면 150% 대미지가 들어갑니다.
+    // =========================================================================
+    public void AnimEvent_DealDamage(float multiplier)
+    {
+        if (player == null || currentHp <= 0) return;
+
+        // 키키가 공격을 피했을 수도 있으니 거리를 다시 잽니다. (사거리보다 살짝 여유를 줌)
+        float distance = Vector3.Distance(transform.position, player.position);
+        float hitRange = (stats != null) ? stats.attackRange + 0.5f : 2.5f;
+
+        if (distance <= hitRange)
+        {
+            // KikiController 스크립트를 찾아서 대미지를 줍니다!
+            KikiController kiki = player.GetComponent<KikiController>();
+            if (kiki != null)
+            {
+                float baseDamage = (stats != null) ? stats.damage : 10f; // 스탯이 없으면 기본 10 대미지
+                float finalDamage = baseDamage * multiplier; // ★ 파라미터로 받은 배수 곱하기!
+
+                kiki.TakeDamage(finalDamage);
+            }
+        }
     }
 }
