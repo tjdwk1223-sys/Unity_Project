@@ -1800,8 +1800,10 @@ MonoBehaviour:
   currentHp: 0
   player: {fileID: 0}
   detectRange: 5
-  hitDuration: 2.5
+  hitDuration: 1.5
   destroyDelay: 5
+  wanderRadius: 10
+  wanderTimer: 3
 --- !u!195 &2899955793071074035
 NavMeshAgent:
   m_ObjectHideFlags: 0

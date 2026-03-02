@@ -9,20 +9,29 @@ public class GameManager : MonoBehaviour
     [Header("인벤토리 데이터 금고")]
     public StandardStashViewData PlayerInventory;
 
-    // --- [히든 퀘스트용 변수] ---
-    public bool hasMagicItem = false;
-    public bool isVSkillUpgraded = false;
-    // ---------------------------------
+    // ▼▼▼ [이 부분이 반드시 있어야 합니다!] ▼▼▼
+    [Header("--- [스킬 해금 상태 관리] ---")]
+    public bool isXSkillUpgraded = false; // 맵 2: 비석 완료 시 true
+    public bool isVSkillUpgraded = false; // 맵 2: 미미 & 매직스톤 완료 시 true
+    public bool isAuraUnlocked = false;   // 맵 3: 소녀 NPC 퀘스트 완료 시 true (검기)
+
+    [Header("--- [퀘스트 진행 아이템] ---")]
+    public bool hasMagicItem = false;     // 미미에게 받은 마법의 파편 보유 여부
 
     private void Awake()
     {
         if (Instance == null)
         {
-            // 내가 최초의 매니저(맵1)라면 불사신이 된다!
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // 인벤토리 초기화
+            // ★ [핵심] 맵1에서 시작할 때 모든 스킬 강제 잠금! (검기 버그 원천 차단)
+            isXSkillUpgraded = false;
+            isVSkillUpgraded = false;
+            isAuraUnlocked = false;
+            hasMagicItem = false;
+
+            PlayerPrefs.DeleteKey("XSkillUpgraded");
             PlayerInventory = new StandardStashViewData(8, 16);
         }
         else
@@ -32,17 +41,10 @@ public class GameManager : MonoBehaviour
 
             if (immortalDialogue != null && myDialogue != null)
             {
-                // 1. NPC 대화(상호작용)를 위해 끊어진 UI 선(대화창, 텍스트)만 조용히 이어줍니다.
                 immortalDialogue.dialoguePanel = myDialogue.dialoguePanel;
                 immortalDialogue.dialogueText = myDialogue.dialogueText;
-
-                // ★ [수정됨] 맵2, 맵3으로 넘어갈 때 오프닝 대사를 강제로 트는 코드를 싹 지웠습니다!
-                // 이제 게임을 처음 켠 맵1에서만 오프닝이 나오고, 다음 맵부터는 절대 안 나옵니다.
-
                 myDialogue.enabled = false;
             }
-
-            // 헌납을 모두 마쳤으니, 중복된 나는 장렬하게 파괴됨!
             Destroy(gameObject);
         }
     }
@@ -50,14 +52,7 @@ public class GameManager : MonoBehaviour
     public void NextStage()
     {
         int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
-
-        if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
-        {
-            SceneManager.LoadScene(nextSceneIndex);
-        }
-        else
-        {
-            Debug.Log("마지막 스테이지입니다!");
-        }
+        if (nextSceneIndex < SceneManager.sceneCountInBuildSettings) SceneManager.LoadScene(nextSceneIndex);
+        else Debug.Log("마지막 스테이지입니다!");
     }
 }

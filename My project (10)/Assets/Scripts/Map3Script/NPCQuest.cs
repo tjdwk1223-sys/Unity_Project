@@ -55,14 +55,15 @@ public class NPCQuest : MonoBehaviour
         dialoguePanel.SetActive(true);
         choiceGroup.SetActive(true);
 
-        // ★ 해결 핵심: 대화 시작할 때 마우스 커서 보이게 하고 잠금 풀기!
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
 
         if (questState == 0)
         {
             nameText.text = "소녀 NPC";
-            talkText.text = "나는 장사중이야 몇년째 손님이 없네...\n롤러코스터 한번 타볼래? 공짜로 태워줄게!";
+            // ▼ 이 부분을 수정했습니다.
+            talkText.text = "나는 장사 중이야. 몇 년째 손님이 없네...\n이제 마법석 에너지도 다 떨어져서 곧 작동도 안 될 텐데...\n롤러코스터 한번 타볼래? 공짜로 태워줄게!";
+
             btn1Text.text = "1. 그래 재밌겠다!";
             btn2Text.text = "2. 아니야 됐어.";
 
@@ -72,6 +73,7 @@ public class NPCQuest : MonoBehaviour
             btn2.onClick.RemoveAllListeners();
             btn2.onClick.AddListener(StartMainStory);
         }
+        // ... 생략
         else if (questState == 1)
         {
             nameText.text = "키키";
@@ -161,10 +163,15 @@ public class NPCQuest : MonoBehaviour
 
     void QuestClear()
     {
-        
         if (portalEffect != null) portalEffect.SetActive(true);
 
-        // ★ 추가됨: 플레이어의 검기 스킬을 열어줍니다!
+        // ▼▼▼ [추가됨] 매니저의 검기 스위치를 켭니다! ▼▼▼
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.isAuraUnlocked = true;
+        }
+
+        // 기존처럼 키키의 공격 스크립트에도 해금을 알려줍니다.
         if (playerAttack != null) playerAttack.UnlockAura();
     }
     void EndDialogue()

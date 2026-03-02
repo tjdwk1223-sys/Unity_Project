@@ -13,13 +13,27 @@ MonoBehaviour:
   m_Name: BossData
   m_EditorClassIdentifier: 
   maxHp: 1000
-  phase2Threshold: 500
-  runDistance: 15
-  attackDistance: 3.5
-  detectDistance: 15
-  attackMaxCooldown: 10
-  runSpeed: 8
-  walkSpeed: 3.5
+  phase2Threshold: 0
+  attackDistance: 2
+  runSpeed: 7
+  walkSpeed: 3
+  stunThresholdSmall: 10
   stunTimeSmall: 1
+  stunThresholdMedium: 100
   stunTimeMedium: 1.5
+  stunThresholdLarge: 150
   stunTimeLarge: 2
+  skill1Cooldown: 3
+  skill1Damage: 50
+  skill2Cooldown: 3
+  skill2Damage: 50
+  skill3Cooldown: 5
+  skill3Damage: 70
+  skill4Cooldown: 10
+  skill4Damage: 100
+  strafeLeftCooldown: 10
+  strafeRightCooldown: 15
+  walkBackCooldown: 30
+  phase2SizeMultiplier: 1.3
+  phase2DamageMultiplier: 1.5
+  phase2SpeedMultiplier: 1.2

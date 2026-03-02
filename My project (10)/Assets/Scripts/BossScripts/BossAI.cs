@@ -13,6 +13,9 @@ public class BossAI : MonoBehaviour
     public Collider leftHandCollider;
     public Collider rightHandCollider;
 
+    private BossPunch leftPunch;
+    private BossPunch rightPunch;
+
     private Animator anim;
     private NavMeshAgent agent;
 
@@ -21,13 +24,28 @@ public class BossAI : MonoBehaviour
     private bool isStunned = false;
     private bool isDead = false;
     private bool isAttacking = false;
+    private bool isEvading = false;
     private bool isRunningState = false;
-    private float[] attackCooldowns = new float[5];
 
-    void Start()
+    // 다단히트 방지용 타이머
+    private float lastHitTime = 0f;
+
+    private float[] skillTimers = new float[5];
+    private float strafeLeftTimer = 0f;
+    private float strafeRightTimer = 0f;
+    private float walkBackTimer = 0f;
+
+    // 평소에는 1배, 페이즈 2가 되면 data에서 배율을 가져와서 곱할 변수
+    private float phaseDamageMultiplier = 1f;
+
+    // ★ [수정 완료] 시작 시 0.5초 대기해서 애니메이션 꼬임 완벽 방지
+    IEnumerator Start()
     {
         anim = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
+
+        if (leftHandCollider) leftPunch = leftHandCollider.GetComponent<BossPunch>();
+        if (rightHandCollider) rightPunch = rightHandCollider.GetComponent<BossPunch>();
 
         if (data != null)
         {
@@ -36,176 +54,203 @@ public class BossAI : MonoBehaviour
             agent.stoppingDistance = data.attackDistance - 0.5f;
         }
 
-        // 시작할 때 혹시라도 켜져 있을 손 판정 끄기 (버그 방지)
         if (leftHandCollider) leftHandCollider.enabled = false;
         if (rightHandCollider) rightHandCollider.enabled = false;
-
         anim.SetInteger("Phase", 1);
+
+        isStunned = true;
+        yield return new WaitForSeconds(0.5f);
+        isStunned = false;
     }
 
-    // --- 애니메이션 이벤트 호출용 함수 ---
     public void StartLeftPunch() { if (leftHandCollider) leftHandCollider.enabled = true; }
     public void StopLeftPunch() { if (leftHandCollider) leftHandCollider.enabled = false; }
     public void StartRightPunch() { if (rightHandCollider) rightHandCollider.enabled = true; }
     public void StopRightPunch() { if (rightHandCollider) rightHandCollider.enabled = false; }
-    // ------------------------------------
 
     void Update()
     {
-        if (isDead || isStunned || isAttacking || data == null || kiki == null) return;
+        if (isDead || isStunned || data == null || kiki == null) return;
+        UpdateCooldowns();
+
+        if (isAttacking || isEvading)
+        {
+            Vector3 lookTarget = new Vector3(kiki.position.x, transform.position.y, kiki.position.z);
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookTarget - transform.position), Time.deltaTime * 5f);
+            return;
+        }
 
         float distance = Vector3.Distance(transform.position, kiki.position);
         anim.SetFloat("Distance", distance);
-
         bool isMoving = agent.velocity.magnitude > 0.1f;
         anim.SetBool("isWalking", isMoving && !isRunningState);
-
-        UpdateCooldowns();
         ThinkAndAct(distance);
+    }
+
+    void UpdateCooldowns()
+    {
+        for (int i = 1; i <= 4; i++) { if (skillTimers[i] > 0) skillTimers[i] -= Time.deltaTime; }
+        if (strafeLeftTimer > 0) strafeLeftTimer -= Time.deltaTime;
+        if (strafeRightTimer > 0) strafeRightTimer -= Time.deltaTime;
+        if (walkBackTimer > 0) walkBackTimer -= Time.deltaTime;
     }
 
     void ThinkAndAct(float distance)
     {
         bool wasRunning = isRunningState;
-
         List<int> readySkills = new List<int>();
-        for (int i = 1; i <= 4; i++)
-        {
-            if (attackCooldowns[i] <= 0) readySkills.Add(i);
-        }
+        for (int i = 1; i <= 4; i++) { if (skillTimers[i] <= 0) readySkills.Add(i); }
 
-        bool anySkillReady = readySkills.Count > 0;
-
-        // 1. 공격 (사거리 안)
-        if (anySkillReady && distance <= data.attackDistance)
+        if (distance <= agent.stoppingDistance + 0.5f)
         {
             isRunningState = false;
-            ResetEvadeAnim(); // 공격 전 혹시 남은 찌꺼기 확실히 정리
-            PerformAttack(readySkills);
+            if (wasRunning) { anim.ResetTrigger("doRun"); anim.SetTrigger("stopRun"); }
+
+            if (readySkills.Count > 0)
+            {
+                int randomPick = Random.Range(0, readySkills.Count);
+                StartCoroutine(AttackRoutine(readySkills[randomPick]));
+            }
+            else
+            {
+                List<string> readyEvasions = new List<string>();
+                if (strafeLeftTimer <= 0) readyEvasions.Add("Left");
+                if (strafeRightTimer <= 0) readyEvasions.Add("Right");
+                if (walkBackTimer <= 0) readyEvasions.Add("Back");
+
+                if (readyEvasions.Count > 0)
+                {
+                    int randEvade = Random.Range(0, readyEvasions.Count);
+                    StartCoroutine(EvadeRoutine(readyEvasions[randEvade]));
+                }
+                else StandStillAndWait();
+            }
         }
-        // 2. 맹추격 (사거리 밖)
-        else if (anySkillReady && distance > data.attackDistance)
+        else
         {
             ResetEvadeAnim();
             if (!isRunningState)
             {
                 isRunningState = true;
-                anim.ResetTrigger("stopRun");
-                anim.SetTrigger("doRun");
-                agent.isStopped = false;
-                agent.speed = data.runSpeed;
+                anim.ResetTrigger("stopRun"); anim.SetTrigger("doRun");
+                agent.isStopped = false; agent.speed = data.runSpeed * (currentPhase == 2 ? data.phase2SpeedMultiplier : 1f);
             }
             agent.SetDestination(kiki.position);
         }
-        // 3. 쿨타임 대기
-        else if (!anySkillReady)
-        {
-            isRunningState = false;
-            StandStillAndWait();
-        }
-
-        // 맹추격하다가 멈춰야 할 때 처리
-        if (wasRunning && !isRunningState)
-        {
-            anim.ResetTrigger("doRun");
-            anim.SetTrigger("stopRun");
-        }
-    }
-
-    void PerformAttack(List<int> readySkills)
-    {
-        int randomPick = Random.Range(0, readySkills.Count);
-        int skillIndexToUse = readySkills[randomPick];
-        StartCoroutine(AttackRoutine(skillIndexToUse));
     }
 
     IEnumerator AttackRoutine(int index)
     {
         isAttacking = true;
         agent.isStopped = true;
+
+        float attackDmg = 0f;
+        if (index == 1) attackDmg = data.skill1Damage;
+        else if (index == 2) attackDmg = data.skill2Damage;
+        else if (index == 3) attackDmg = data.skill3Damage;
+        else if (index == 4) attackDmg = data.skill4Damage;
+
+        float finalDmg = attackDmg * phaseDamageMultiplier;
+        if (leftPunch) leftPunch.damage = finalDmg;
+        if (rightPunch) rightPunch.damage = finalDmg;
+
         anim.SetInteger("attackIndex", index);
         anim.SetTrigger("doAttack");
-        attackCooldowns[index] = data.attackMaxCooldown;
 
-        yield return new WaitForSeconds(2.0f); // 애니메이션 길이에 맞춰 대기
+        if (index == 1) skillTimers[1] = data.skill1Cooldown;
+        else if (index == 2) skillTimers[2] = data.skill2Cooldown;
+        else if (index == 3) skillTimers[3] = data.skill3Cooldown;
+        else if (index == 4) skillTimers[4] = data.skill4Cooldown;
 
-        // ★ 핵심: 공격 끝나면 혹시라도 켜져 있을 모든 주먹 판정 강제 종료 (다단히트 방지)
-        StopLeftPunch();
-        StopRightPunch();
+        yield return new WaitForSeconds(2.0f);
 
+        StopLeftPunch(); StopRightPunch();
         isAttacking = false;
         agent.isStopped = false;
     }
 
-    void StandStillAndWait()
+    IEnumerator EvadeRoutine(string evadeType)
     {
-        agent.isStopped = true;
-        ResetEvadeAnim();
-
-        // 미끄러지지 않고 제자리에서 키키만 노려봄
-        Vector3 lookTarget = new Vector3(kiki.position.x, transform.position.y, kiki.position.z);
-        transform.LookAt(lookTarget);
+        isEvading = true; agent.isStopped = true; ResetEvadeAnim();
+        if (evadeType == "Left") { anim.SetBool("isStrafing", true); strafeLeftTimer = data.strafeLeftCooldown; }
+        else if (evadeType == "Right") { anim.SetBool("isStrafingRight", true); strafeRightTimer = data.strafeRightCooldown; }
+        else if (evadeType == "Back") { anim.SetBool("isWalkingBack", true); walkBackTimer = data.walkBackCooldown; }
+        yield return new WaitForSeconds(2.0f);
+        ResetEvadeAnim(); isEvading = false; agent.isStopped = false;
     }
 
-    void ResetEvadeAnim()
-    {
-        // 족보 꼬임을 막기 위한 과거 회피 애니메이션 스위치 일괄 OFF
-        anim.SetBool("isStrafing", false);
-        anim.SetBool("isStrafingRight", false);
-        anim.SetBool("isWalkingBack", false);
-    }
+    void StandStillAndWait() { agent.isStopped = true; ResetEvadeAnim(); transform.LookAt(new Vector3(kiki.position.x, transform.position.y, kiki.position.z)); }
+    void ResetEvadeAnim() { anim.SetBool("isStrafing", false); anim.SetBool("isStrafingRight", false); anim.SetBool("isWalkingBack", false); }
 
-    void UpdateCooldowns()
-    {
-        for (int i = 1; i <= 4; i++)
-        {
-            if (attackCooldowns[i] > 0) attackCooldowns[i] -= Time.deltaTime;
-        }
-    }
-
-    // 데미지 및 페이즈 처리 로직 (이전과 동일하게 완벽 유지)
     public void TakeDamage(float damage)
     {
+        // 다단히트 완벽 방어
+        if (Time.time < lastHitTime + 0.1f) return;
+        lastHitTime = Time.time;
+
         if (isDead) return;
         currentHp -= damage;
-        if (currentPhase == 1 && currentHp <= data.phase2Threshold)
-        {
-            StartCoroutine(ChangePhaseRoutine());
-            return;
-        }
+
+        if (currentPhase == 1 && currentHp <= data.phase2Threshold) { StartCoroutine(ChangePhaseRoutine()); return; }
         if (currentHp <= 0) { Die(); return; }
-        if (damage >= 80) StartCoroutine(StunRoutine(3, data.stunTimeLarge));
-        else if (damage >= 50) StartCoroutine(StunRoutine(2, data.stunTimeMedium));
-        else if (damage >= 10) StartCoroutine(StunRoutine(1, data.stunTimeSmall));
+        if (isStunned) return;
+
+        if (damage >= data.stunThresholdLarge) StartCoroutine(StunRoutine(3, data.stunTimeLarge));
+        else if (damage >= data.stunThresholdMedium) StartCoroutine(StunRoutine(2, data.stunTimeMedium));
+        else if (damage >= data.stunThresholdSmall) StartCoroutine(StunRoutine(1, data.stunTimeSmall));
     }
 
+    // ★ [수정 완료] 맞은 후 강시처럼 미끄러지는 버그 해결
     IEnumerator StunRoutine(int hitType, float stunTime)
     {
         isStunned = true;
         agent.isStopped = true;
+
+        isRunningState = false;
+        anim.ResetTrigger("doRun");
+
         anim.SetInteger("HitType", hitType);
         anim.SetTrigger("doHit");
+
         yield return new WaitForSeconds(stunTime);
+
         isStunned = false;
         agent.isStopped = false;
     }
 
+    // ★ [수정 완료] 페이즈 변신 후 미끄러짐 방지 및 체력 풀회복
     IEnumerator ChangePhaseRoutine()
     {
         currentPhase = 2;
         anim.SetInteger("Phase", 2);
         isStunned = true;
         agent.isStopped = true;
+
+        isRunningState = false;
+        anim.ResetTrigger("doRun");
+
         anim.SetTrigger("doRage");
+
+        currentHp = data.maxHp;
+
+        phaseDamageMultiplier = data.phase2DamageMultiplier;
+
+        float sizeMult = data.phase2SizeMultiplier;
+        transform.localScale *= sizeMult;
+
+        agent.stoppingDistance *= sizeMult;
+        agent.speed *= data.phase2SpeedMultiplier;
+
+        if (leftPunch) leftPunch.hitRadius *= sizeMult;
+        if (rightPunch) rightPunch.hitRadius *= sizeMult;
+
         yield return new WaitForSeconds(3.0f);
+
         isStunned = false;
         agent.isStopped = false;
+
+        Debug.Log($"🔥 마왕 페이즈 2 진입! 체력 {currentHp}으로 완전 회복 및 스탯 강화 완료!");
     }
 
-    void Die()
-    {
-        isDead = true;
-        agent.isStopped = true;
-        anim.SetBool("isDead", true);
-    }
+    void Die() { isDead = true; agent.isStopped = true; anim.SetBool("isDead", true); }
 }

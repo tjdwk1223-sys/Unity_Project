@@ -27,6 +27,12 @@ public class DialogueManager : MonoBehaviour
 
     void Start()
     {
+        // ★ [새로 추가] 대화창 패널이 안 채워져 있다면, 에러 내지 말고 그냥 아무것도 하지 마!
+        if (dialoguePanel == null)
+        {
+            return;
+        }
+
         if (openingSentences != null && openingSentences.Length > 0)
         {
             StartDialogue(openingSentences);
@@ -52,6 +58,9 @@ public class DialogueManager : MonoBehaviour
 
     public void StartDialogue(string[] newSentences)
     {
+        // ★ [새로 추가] 여기서도 패널이 없으면 시작 자체를 막아버립니다.
+        if (dialoguePanel == null) return;
+
         // 대화 시작 시 현재 프레임 번호를 딱 찍어둡니다.
         startFrame = Time.frameCount;
 

@@ -22,6 +22,15 @@ public class PlayerAttack : MonoBehaviour
 
     void Start()
     {
+        // ▼▼▼ [수정됨: 고장난 PlayerPrefs를 지우고 게임 매니저와 연결!] ▼▼▼
+        if (GameManager.Instance != null)
+        {
+            // 매니저가 "너 검기 써도 돼(true)" 하면 켜고, "안 돼(false)" 하면 끕니다.
+            hasSwordAura = GameManager.Instance.isAuraUnlocked;
+        }
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+        // 이 아래쪽 오브젝트 풀링(검기 미리 만들어두기)은 그대로 둡니다!
         for (int i = 0; i < poolSize; i++)
         {
             GameObject obj = Instantiate(auraPrefab);
@@ -29,7 +38,6 @@ public class PlayerAttack : MonoBehaviour
             auraPool.Add(obj);
         }
     }
-
     void Update()
     {
         if (hasSwordAura && Input.GetMouseButtonDown(0) && !isAttacking)
@@ -77,5 +85,9 @@ public class PlayerAttack : MonoBehaviour
     public void UnlockAura()
     {
         hasSwordAura = true;
+
+        // ★ [추가된 부분 2] NPC 퀘스트를 깨서 검기를 얻는 순간, 유니티 시스템에 영구 저장!
+        PlayerPrefs.SetInt("SwordAuraUnlocked", 1);
+        Debug.Log("검기 스킬 영구 해금 완료!");
     }
 }

@@ -192,11 +192,17 @@ public class MimiNPC : MonoBehaviour, IInteractable
     public void SecondChoice(int num)
     {
         choiceGroup2.SetActive(false);
-        if (num == 1) { isFollowing = true; anim.SetInteger("WalkType", 1); CloseDialogue(); }
+        if (num == 1)
+        {
+            isFollowing = true;
+            anim.SetInteger("WalkType", 1);
+            // ▼▼▼ [이 부분을 꼭 추가해 주세요!] ▼▼▼
+            questState = 1;
+            CloseDialogue();
+        }
         else if (num == 2) { questState = 1; CloseDialogue(); }
         else if (num == 3) { dialogueStep = 2; anim.SetTrigger("doKneel"); ShowKneelDialogue(); }
     }
-
     void ShowKneelDialogue()
     {
         dialoguePanel.SetActive(true);

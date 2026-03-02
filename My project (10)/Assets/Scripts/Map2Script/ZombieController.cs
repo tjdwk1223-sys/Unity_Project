@@ -15,7 +15,7 @@ public class ZombieController : MonoBehaviour
     [Header("기타 설정")]
     public Transform player;
     public float detectRange = 20.0f;
-    public float hitDuration = 0.5f;
+    public float hitDuration = 1.5f; // <--- 1.5f로 넉넉하게 늘려주세요!
     public float destroyDelay = 5.0f;
 
     [Header("순찰(Patrol) 설정")]

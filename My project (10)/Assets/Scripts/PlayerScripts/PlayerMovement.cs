@@ -10,28 +10,25 @@ public class KikiController : MonoBehaviour
     public void AnimEvent_AoEAttack(float multiplier)
     {
         int finalDamage = Mathf.RoundToInt(currentBaseDamage * multiplier);
-        Debug.Log($"쾅! 광역기 폭발! (반경: {aoeRadius}, 대미지: {finalDamage})");
-
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, aoeRadius);
 
         foreach (Collider col in hitColliders)
         {
             ZombieController zombie = col.GetComponentInParent<ZombieController>();
-            if (zombie != null)
-            {
-                Debug.Log($"-> {zombie.name} 명중! 대미지 들어감!");
-                zombie.OnHit();
-                zombie.TakeDamage(finalDamage);
-            }
+            if (zombie != null) { zombie.OnHit(); zombie.TakeDamage(finalDamage); }
 
             MimiNPC mimi = col.GetComponentInParent<MimiNPC>();
-            if (mimi != null && mimi.isAttacking == true)
+            if (mimi != null && mimi.isAttacking == true) { mimi.TakeDamage(finalDamage); }
+
+            BossAI boss = col.GetComponentInParent<BossAI>();
+            if (boss != null)
             {
-                mimi.TakeDamage(finalDamage);
+                // ★ [로그 추가] 광역기가 마왕을 때렸을 때!
+                Debug.Log($"👉 [광역 스킬 폭발] 마왕에게 {finalDamage} 대미지 전송 시도!");
+                boss.TakeDamage(finalDamage);
             }
         }
     }
-
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
@@ -103,16 +100,16 @@ public class KikiController : MonoBehaviour
     {
         controller = GetComponent<CharacterController>();
         anim = GetComponent<Animator>();
-
         Cursor.lockState = CursorLockMode.Locked;
-
         if (cameraTransform == null) cameraTransform = Camera.main.transform;
         if (stats != null) currentHp = stats.maxHp;
 
-        if (PlayerPrefs.GetInt("XSkillUpgraded", 0) == 1)
+        // ▼▼▼ [수정된 부분] PlayerPrefs 지우고 매니저를 바라보게 수정! ▼▼▼
+        if (GameManager.Instance != null)
         {
-            isXSkillUpgraded = true;
+            isXSkillUpgraded = GameManager.Instance.isXSkillUpgraded;
         }
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
     }
 
     void Update()
@@ -310,13 +307,17 @@ public class KikiController : MonoBehaviour
         if (footWeapon != null) footWeapon.DisableCollider();
     }
 
+    // ▼▼▼ [수정된 부분] PlayerPrefs 대신 매니저의 스위치를 켭니다! ▼▼▼
     public void UpgradeXSkill()
     {
         isXSkillUpgraded = true;
-        PlayerPrefs.SetInt("XSkillUpgraded", 1);
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.isXSkillUpgraded = true;
+        }
         Debug.Log("땅 후려찍기(X) 스킬 강화 완료!! 거대 이펙트 장전!");
     }
-
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
     public void SpawnXSkillEffect()
     {
         if (isXSkillUpgraded && xSkillEffectPrefab != null)

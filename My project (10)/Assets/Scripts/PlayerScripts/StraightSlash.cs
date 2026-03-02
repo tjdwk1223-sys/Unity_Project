@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class StraightSlash : MonoBehaviour
 {
@@ -6,46 +6,59 @@ public class StraightSlash : MonoBehaviour
     public float lifeTime = 2f;
     private float timer = 0f;
 
-    [Header("--- ´ë¹ÌÁö ¼³Á¤ ---")]
-    public GameObject damageTextPrefab; // À¯´ÏÆ¼¿¡¼­ DamageText ÇÁ¸®ÆÕÀ» ¿¬°áÇÏ¼¼¿ä!
+    [Header("--- ëŒ€ë¯¸ì§€ ì„¤ì • ---")]
+    public int baseDamage = 30;
+    public GameObject damageTextPrefab;
 
     [HideInInspector]
     public Vector3 shootDirection;
 
-    void OnEnable()
-    {
-        timer = 0f;
-    }
+    void OnEnable() { timer = 0f; }
 
     void Update()
     {
         transform.position += shootDirection * speed * Time.deltaTime;
-
         timer += Time.deltaTime;
-        if (timer >= lifeTime)
-        {
-            gameObject.SetActive(false);
-        }
+        if (timer >= lifeTime) gameObject.SetActive(false);
     }
 
-    // Àû°ú ºÎµúÇûÀ» ¶§ ¼ıÀÚ¸¦ ¶ç¿ì´Â ÄÚµå Ãß°¡
     private void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Enemy"))
+        ZombieController zombie = other.GetComponent<ZombieController>();
+        // â˜… ë³´ìŠ¤(BossAI) ë§¤ê°œë³€ìˆ˜ë¥¼ ë„˜ê¸°ê¸° ìœ„í•´ ApplyDamage í•¨ìˆ˜ í˜•íƒœë¥¼ ë°”ê¿¨ìŠµë‹ˆë‹¤.
+        if (zombie != null) { ApplyDamage(zombie.transform, zombie, null, null); return; }
+
+        MimiNPC mimi = other.GetComponent<MimiNPC>();
+        if (mimi != null && mimi.isAttacking) { ApplyDamage(mimi.transform, null, mimi, null); return; }
+
+        // â–¼â–¼â–¼ [ì¶”ê°€ë¨] ë³´ìŠ¤ì™€ ë¶€ë”ªí˜”ëŠ”ì§€ í™•ì¸! â–¼â–¼â–¼
+        BossAI boss = other.GetComponent<BossAI>();
+        if (boss != null) { ApplyDamage(boss.transform, null, null, boss); return; }
+    }
+
+    // â˜… BossAI boss ë§¤ê°œë³€ìˆ˜ê°€ í•˜ë‚˜ ë” ì¶”ê°€ë˜ì—ˆìŠµë‹ˆë‹¤.
+    void ApplyDamage(Transform targetTransform, ZombieController zombie, MimiNPC mimi, BossAI boss)
+    {
+        int finalDamage = Random.Range(baseDamage - 5, baseDamage + 5);
+        bool isCrit = Random.Range(0, 100) < 20;
+        if (isCrit) finalDamage *= 2;
+
+        if (zombie != null) { zombie.OnHit(); zombie.TakeDamage(finalDamage); }
+        if (mimi != null) { mimi.TakeDamage(finalDamage); }
+
+        if (boss != null)
         {
-            int damage = Random.Range(20, 40);
-            bool isCrit = Random.Range(0, 100) < 20;
-            if (isCrit) damage *= 2;
-
-            // ÀûÀÇ ¸Ó¸® À§(¾à 2m)¿¡ »ı¼º
-            Vector3 spawnPos = other.transform.position + Vector3.up * 2.0f;
-            GameObject textObj = Instantiate(damageTextPrefab, spawnPos, Quaternion.identity);
-
-            // DamageText ½ºÅ©¸³Æ®ÀÇ Setup È£Ãâ
-            textObj.GetComponent<DamageText>().Setup(damage, isCrit);
-
-            // Àû¿¡°Ô ¸Â¾ÒÀ¸´Ï °Ë±â¸¦ »ç¶óÁö°Ô ÇÔ (°üÅëÀ» ¿øÇÏ¸é ¾Æ·¡ ÁÙ »èÁ¦)
-            gameObject.SetActive(false);
+            // â˜… [ë¡œê·¸ ì¶”ê°€] ê²€ê¸°ê°€ ë§ˆì™•ì—ê²Œ ë§ì•˜ì„ ë•Œ!
+            Debug.Log($"ğŸ‘‰ [ê²€ê¸° ëª…ì¤‘] ë§ˆì™•ì—ê²Œ {finalDamage} ëŒ€ë¯¸ì§€ ì „ì†¡ ì‹œë„! (í¬ë¦¬í‹°ì»¬: {isCrit})");
+            boss.TakeDamage(finalDamage);
         }
+
+        if (damageTextPrefab != null) // ... (ì´í•˜ í…ìŠ¤íŠ¸ ë„ìš°ëŠ” ì½”ë“œ ë™ì¼)
+        {
+            Vector3 spawnPos = targetTransform.position + Vector3.up * 2.0f;
+            GameObject textObj = Instantiate(damageTextPrefab, spawnPos, Quaternion.identity);
+            textObj.GetComponent<DamageText>().Setup(finalDamage, isCrit);
+        }
+        gameObject.SetActive(false);
     }
 }

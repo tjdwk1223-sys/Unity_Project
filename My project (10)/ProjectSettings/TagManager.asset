@@ -9,6 +9,7 @@ TagManager:
   - NPC
   - Boss
   - UI
+  - New tag
   layers:
   - Default
   - TransparentFX
