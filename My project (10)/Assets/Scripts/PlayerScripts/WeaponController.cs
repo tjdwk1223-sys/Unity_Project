@@ -18,20 +18,39 @@ public class WeaponController : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        // ★ [로그 추가] 무기가 허공이 아닌 뭔가에 닿았을 때 무조건 이름 출력!
-        Debug.Log($"[무기 충돌 테스트] 키키의 무기가 '{other.name}'(이)랑 부딪힘!");
+        // 1. [복구됨] 좀비 피격 코드 (이게 없어서 안 맞았던 겁니다!)
+        ZombieController zombie = other.GetComponentInParent<ZombieController>();
+        if (zombie != null)
+        {
+            zombie.OnHit();
+            zombie.TakeDamage(currentDamage);
+            return; // 좀비를 때렸으면 보스 판정은 패스 (중복 방지)
+        }
 
-        ZombieController zombie = other.GetComponent<ZombieController>();
-        if (zombie != null) { zombie.OnHit(); zombie.TakeDamage(currentDamage); return; }
+        // 2. [기존 유지] 미미(NPC) 피격 코드 (혹시 몰라 넣어둠)
+        MimiNPC mimi = other.GetComponentInParent<MimiNPC>();
+        if (mimi != null && mimi.isAttacking)
+        {
+            mimi.TakeDamage(currentDamage);
+        }
 
-        MimiNPC mimi = other.GetComponent<MimiNPC>();
-        if (mimi != null && mimi.isAttacking == true) { mimi.TakeDamage(currentDamage); return; }
-
+        // 3. [신규 기능] 보스 피격 + V스킬 강화 코드
         BossAI boss = other.GetComponent<BossAI>();
         if (boss != null)
         {
-            // ★ [로그 추가] 마왕을 정확히 인식하고 딜을 넣기 직전!
-            Debug.Log($"👉 [무기 타격 성공] 마왕에게 {currentDamage} 대미지 전송 시도!");
+            // V 스킬 강화 상태인지 체크
+            if (GameManager.Instance != null && GameManager.Instance.isVSkillUpgraded && playerController != null)
+            {
+                // 현재 플레이어가 V 스킬(Skill5) 애니메이션 중인지 확인
+                Animator pAnim = playerController.GetComponent<Animator>();
+                if (pAnim != null && pAnim.GetCurrentAnimatorStateInfo(0).IsName("Skill5"))
+                {
+                    // V스킬로 때렸을 때 점수 추가 (선택 사항)
+                    GameManager.Instance.AddScore(10);
+                    Debug.Log("⚡ V 스킬로 보스 타격! 점수 획득!");
+                }
+            }
+            // 보스에게 대미지 전달
             boss.TakeDamage(currentDamage);
         }
     }

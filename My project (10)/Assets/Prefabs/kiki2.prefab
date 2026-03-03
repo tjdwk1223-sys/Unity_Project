@@ -2709,7 +2709,6 @@ GameObject:
   - component: {fileID: 4984545846036501019}
   - component: {fileID: 5884407160182491909}
   - component: {fileID: 5823613165862796892}
-  - component: {fileID: 1168090291077111587}
   - component: {fileID: 2780221745419536488}
   - component: {fileID: 3680586938057061701}
   - component: {fileID: 4496677221048433498}
@@ -3016,6 +3015,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c615f1e4329df0e46861b0ab8edfbee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  isInvincible: 0
+  invincibilityDuration: 0.5
   aoeRadius: 5
   stats: {fileID: 11400000, guid: 691a29e9fec39434cb9e5f6156f55220, type: 2}
   currentHp: 0
@@ -3073,20 +3074,6 @@ CharacterController:
   m_SkinWidth: 0.01
   m_MinMoveDistance: 0
   m_Center: {x: 0, y: 1, z: 0}
---- !u!114 &1168090291077111587
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3233611773651171094}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7280022a2b3576f41a20b7f68c7ee48a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  interactDistance: 3
-  interactUI: {fileID: 0}
 --- !u!114 &2780221745419536488
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7191,6 +7178,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4792570094829200252, guid: e76953abd38b815418372b60b7d71c44, type: 3}
+      propertyPath: damageCollider
+      value: 
+      objectReference: {fileID: 2424098951890891254}
+    - target: {fileID: 4792570094829200252, guid: e76953abd38b815418372b60b7d71c44, type: 3}
+      propertyPath: playerController
+      value: 
+      objectReference: {fileID: 5884407160182491909}
     - target: {fileID: 5161243232467519356, guid: e76953abd38b815418372b60b7d71c44, type: 3}
       propertyPath: m_Name
       value: J_Bip_R_Foot
@@ -7227,6 +7222,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8eed132fdfdcb5345a4ab3f1026963ac, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!65 &2424098951890891254 stripped
+BoxCollider:
+  m_CorrespondingSourceObject: {fileID: 7932856756263740589, guid: e76953abd38b815418372b60b7d71c44, type: 3}
+  m_PrefabInstance: {fileID: 5742945046629586267}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &5052771157293270012 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 696939255284111015, guid: e76953abd38b815418372b60b7d71c44, type: 3}

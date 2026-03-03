@@ -58,9 +58,10 @@ public class DialogueManager : MonoBehaviour
 
     public void StartDialogue(string[] newSentences)
     {
-        // ★ [새로 추가] 여기서도 패널이 없으면 시작 자체를 막아버립니다.
-        if (dialoguePanel == null) return;
+        // ★ [이 한 줄을 추가하세요] 대사가 비어있으면 아예 시작을 안 하게 합니다.
+        if (newSentences == null || newSentences.Length == 0) return;
 
+        if (dialoguePanel == null) return;
         // 대화 시작 시 현재 프레임 번호를 딱 찍어둡니다.
         startFrame = Time.frameCount;
 

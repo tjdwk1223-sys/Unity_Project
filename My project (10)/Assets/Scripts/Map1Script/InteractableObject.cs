@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class InteractableObject : MonoBehaviour
 {
-    [Header("UI 연결")]
+    [Header("UI 연결 (인스펙터 빈칸 꼭 확인!)")]
     public GameObject interactUI; // 아까 만든 [E] 텍스트를 넣을 칸
     public DialogueManager dialogueManager; // 대사창 매니저를 넣을 칸
 
@@ -12,31 +12,42 @@ public class InteractableObject : MonoBehaviour
 
     private bool isPlayerNearby = false;
 
+    void Start()
+    {
+        // 게임 시작 시 [E] UI가 켜져 있다면 안전하게 꺼줍니다.
+        if (interactUI != null) interactUI.SetActive(false);
+    }
+
     void Update()
     {
-        // 플레이어가 근처에 있고 E키를 누르면
-        if (isPlayerNearby && Input.GetKeyDown(KeyCode.E))
-        {
-            interactUI.SetActive(false); // E 글자는 끄고
-            dialogueManager.StartDialogue(lines); // 매니저에게 대사를 넘겨주고 출력 시작!
-        }
+        // 1. 플레이어가 근처에 없거나 E키를 누르지 않았다면 무시!
+        if (!isPlayerNearby || !Input.GetKeyDown(KeyCode.E)) return;
+
+        // 2. 대화창이 이미 열려있다면 중복으로 실행되지 않게 막기!
+        if (dialogueManager != null && dialogueManager.isDialogueActive) return;
+
+        // 3. E키를 정상적으로 눌렀을 때
+        if (interactUI != null) interactUI.SetActive(false); // E 글자는 끄고
+        if (dialogueManager != null) dialogueManager.StartDialogue(lines); // 대사 시작!
     }
 
     void OnTriggerEnter(Collider other)
     {
+        // 키키(플레이어)가 다가오면
         if (other.CompareTag("Player"))
         {
             isPlayerNearby = true;
-            interactUI.SetActive(true); // 근처에 가면 UI 켜기
+            if (interactUI != null) interactUI.SetActive(true); // E UI 켜기
         }
     }
 
     void OnTriggerExit(Collider other)
     {
+        // 키키(플레이어)가 멀어지면
         if (other.CompareTag("Player"))
         {
             isPlayerNearby = false;
-            interactUI.SetActive(false); // 멀어지면 UI 끄기
+            if (interactUI != null) interactUI.SetActive(false); // E UI 끄기
         }
     }
 }

@@ -58,36 +58,48 @@ public class NPCQuest : MonoBehaviour
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
 
-        if (questState == 0)
+        if (questState == 0) // 첫 번째 권유
         {
             nameText.text = "소녀 NPC";
-            // ▼ 이 부분을 수정했습니다.
-            talkText.text = "나는 장사 중이야. 몇 년째 손님이 없네...\n이제 마법석 에너지도 다 떨어져서 곧 작동도 안 될 텐데...\n롤러코스터 한번 타볼래? 공짜로 태워줄게!";
+            talkText.text = "나는 장사 중이야. 몇 년째 손님이 없네...\n롤러코스터 한번 타볼래? 공짜로 태워줄게!";
 
             btn1Text.text = "1. 그래 재밌겠다!";
             btn2Text.text = "2. 아니야 됐어.";
 
+            // ★★★ [점수 반영] ★★★
             btn1.onClick.RemoveAllListeners();
-            btn1.onClick.AddListener(GoRideCoaster);
+            btn1.onClick.AddListener(() => {
+                if (GameManager.Instance != null) GameManager.Instance.AddScore(2); // 탄다: +2점
+                GoRideCoaster();
+            });
 
             btn2.onClick.RemoveAllListeners();
-            btn2.onClick.AddListener(StartMainStory);
+            btn2.onClick.AddListener(() => {
+                if (GameManager.Instance != null) GameManager.Instance.AddScore(10); // 안 탄다: +10점
+                StartMainStory();
+            });
         }
-        // ... 생략
-        else if (questState == 1)
+        else if (questState == 1) // 타고 난 뒤 (한 번 더?)
         {
             nameText.text = "키키";
             talkText.text = "와 너무 재밌다! 한번 더 타도 돼?";
             btn1Text.text = "응 (한번 더 타기)";
             btn2Text.text = "나쁘지 않네 (그만 타고 대화하기)";
 
+            // ★★★ [점수 반영] ★★★
             btn1.onClick.RemoveAllListeners();
-            btn1.onClick.AddListener(GoRideCoaster);
+            btn1.onClick.AddListener(() => {
+                if (GameManager.Instance != null) GameManager.Instance.AddScore(-1); // 또 탄다: -1점 (감점)
+                GoRideCoaster();
+            });
 
             btn2.onClick.RemoveAllListeners();
-            btn2.onClick.AddListener(StartMainStory);
+            btn2.onClick.AddListener(() => {
+                if (GameManager.Instance != null) GameManager.Instance.AddScore(3); // 그만 탄다: +3점
+                StartMainStory();
+            });
         }
-        else if (questState == 3)
+        else if (questState == 3) // 이미 완료했을 때
         {
             choiceGroup.SetActive(false);
             nameText.text = "소녀 NPC";
@@ -99,7 +111,7 @@ public class NPCQuest : MonoBehaviour
     void GoRideCoaster()
     {
         EndDialogue();
-        questState = 1;
+        questState = 1; // 다음엔 '한번 더?' 대사가 나오게 변경
         if (coaster != null) coaster.Ride();
     }
 
@@ -154,7 +166,7 @@ public class NPCQuest : MonoBehaviour
                 QuestClear();
                 break;
             default:
-                questState = 3;  // ★여기로 추가! 대화창이 닫힐 때 퀘스트 완료 처리!
+                questState = 3;  // 완료 상태로 변경
                 EndDialogue();
                 break;
         }
@@ -165,21 +177,18 @@ public class NPCQuest : MonoBehaviour
     {
         if (portalEffect != null) portalEffect.SetActive(true);
 
-        // ▼▼▼ [추가됨] 매니저의 검기 스위치를 켭니다! ▼▼▼
         if (GameManager.Instance != null)
         {
             GameManager.Instance.isAuraUnlocked = true;
         }
 
-        // 기존처럼 키키의 공격 스크립트에도 해금을 알려줍니다.
         if (playerAttack != null) playerAttack.UnlockAura();
     }
+
     void EndDialogue()
     {
         isTalking = false;
         dialoguePanel.SetActive(false);
-
-        // ★ 해결 핵심: 대화 끝나면 다시 마우스 숨기고 잠그기! (게임 모드로 복귀)
         Cursor.visible = false;
         Cursor.lockState = CursorLockMode.Locked;
     }

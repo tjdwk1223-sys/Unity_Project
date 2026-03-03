@@ -4,31 +4,65 @@ using UnityEngine.UI;
 
 public class KikiController : MonoBehaviour
 {
+    [Header("--- 무적 및 넉백 설정 ---")]
+    public bool isInvincible = false;       // 무적 상태인지?
+    public float invincibilityDuration = 0.5f; // 무적 지속 시간
+
     [Header("--- 광역 스킬(AoE) 설정 ---")]
     public float aoeRadius = 5.0f;
 
+    // ★★★ [여기만 수정됨] V스킬 강화 시 보스에게 1000 데미지 ★★★
     public void AnimEvent_AoEAttack(float multiplier)
     {
         int finalDamage = Mathf.RoundToInt(currentBaseDamage * multiplier);
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, aoeRadius);
 
+        // V 스킬인지 확인 (현재 애니메이션 이름이 Skill5인지 체크)
+        bool isVSkill = false;
+        if (anim != null)
+        {
+            // 애니메이션 상태 이름이 "Skill5"인지 확인 (님이 설정한 이름)
+            if (anim.GetCurrentAnimatorStateInfo(0).IsName("Skill5")) isVSkill = true;
+        }
+
+        bool isVUpgraded = false;
+        if (GameManager.Instance != null) isVUpgraded = GameManager.Instance.isVSkillUpgraded;
+
         foreach (Collider col in hitColliders)
         {
             ZombieController zombie = col.GetComponentInParent<ZombieController>();
-            if (zombie != null) { zombie.OnHit(); zombie.TakeDamage(finalDamage); }
+            // 좀비 피격 로직 (기존 그대로)
+            if (zombie != null)
+            {
+                zombie.OnHit();
+                zombie.TakeDamage(finalDamage);
+            }
 
             MimiNPC mimi = col.GetComponentInParent<MimiNPC>();
-            if (mimi != null && mimi.isAttacking == true) { mimi.TakeDamage(finalDamage); }
+            // 미미 피격 로직 (기존 그대로)
+            if (mimi != null && mimi.isAttacking == true)
+            {
+                mimi.TakeDamage(finalDamage);
+            }
 
             BossAI boss = col.GetComponentInParent<BossAI>();
             if (boss != null)
             {
-                // ★ [로그 추가] 광역기가 마왕을 때렸을 때!
-                Debug.Log($"👉 [광역 스킬 폭발] 마왕에게 {finalDamage} 대미지 전송 시도!");
-                boss.TakeDamage(finalDamage);
+                // ★ [추가된 부분] V스킬이고 + 강화되었으면 -> 데미지 1000 !
+                if (isVSkill && isVUpgraded)
+                {
+                    Debug.Log("⚡ [전설의 V 스킬] 보스에게 1000 데미지 폭발!");
+                    boss.TakeDamage(1000);
+                }
+                else
+                {
+                    Debug.Log($"👉 [일반 스킬] 보스에게 {finalDamage} 대미지");
+                    boss.TakeDamage(finalDamage);
+                }
             }
         }
     }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
@@ -38,7 +72,6 @@ public class KikiController : MonoBehaviour
     [Header("★ 능력치 데이터 연결")]
     public CharacterStats stats;
     private float lastAttackTime;
-
     private int currentBaseDamage;
 
     [Header("실시간 상태")]
@@ -75,7 +108,6 @@ public class KikiController : MonoBehaviour
     public WeaponController footWeapon;
     public float attackActiveTime = 0.5f;
 
-    // ▼▼▼▼▼ [새로 추가된 부분: 스킬 데이터 및 타이머] ▼▼▼▼▼
     [Header("--- 스킬 데이터 (쿨타임 관리용) ---")]
     public SkillData xSkillData;
     public SkillData cSkillData;
@@ -83,13 +115,11 @@ public class KikiController : MonoBehaviour
     public SkillData fSkillData;
     public SkillData vSkillData;
 
-    // 실제 쿨타임이 줄어들 타이머 변수들 (인스펙터에 안보이게 숨김)
     [HideInInspector] public float xSkillTimer = 0f;
     [HideInInspector] public float cSkillTimer = 0f;
     [HideInInspector] public float qSkillTimer = 0f;
     [HideInInspector] public float fSkillTimer = 0f;
     [HideInInspector] public float vSkillTimer = 0f;
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     private CharacterController controller;
     private Animator anim;
@@ -104,23 +134,20 @@ public class KikiController : MonoBehaviour
         if (cameraTransform == null) cameraTransform = Camera.main.transform;
         if (stats != null) currentHp = stats.maxHp;
 
-        // ▼▼▼ [수정된 부분] PlayerPrefs 지우고 매니저를 바라보게 수정! ▼▼▼
         if (GameManager.Instance != null)
         {
             isXSkillUpgraded = GameManager.Instance.isXSkillUpgraded;
         }
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
     }
 
     void Update()
     {
-        // ▼▼▼ [새로 추가된 부분: 매 프레임마다 스킬 쿨타임 타이머 줄이기] ▼▼▼
+        // 스킬 쿨타임 감소
         if (xSkillTimer > 0) xSkillTimer -= Time.deltaTime;
         if (cSkillTimer > 0) cSkillTimer -= Time.deltaTime;
         if (qSkillTimer > 0) qSkillTimer -= Time.deltaTime;
         if (fSkillTimer > 0) fSkillTimer -= Time.deltaTime;
         if (vSkillTimer > 0) vSkillTimer -= Time.deltaTime;
-        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
         isGrounded = controller.isGrounded;
 
@@ -158,25 +185,20 @@ public class KikiController : MonoBehaviour
             float animSpeedValue = isRunningInput ? 2.0f : 1.0f;
             anim.SetFloat("Speed", inputMagnitude * animSpeedValue);
 
-            if (inputMagnitude > 0.1f && isRunningInput)
-            {
-                anim.SetBool("isRunning", true);
-            }
-            else
-            {
-                anim.SetBool("isRunning", false);
-            }
+            anim.SetBool("isRunning", inputMagnitude > 0.1f && isRunningInput);
         }
-
         if (Input.GetButtonDown("Jump") && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             if (anim != null) anim.SetBool("isGrounded", false);
         }
 
+        // 넉백 후 서서히 멈추는 브레이크 (기존 유지)
+        velocity.x = Mathf.Lerp(velocity.x, 0, Time.deltaTime * 5f);
+        velocity.z = Mathf.Lerp(velocity.z, 0, Time.deltaTime * 5f);
+
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
-
         HandleCombatInput();
 
         if (hpBarImage != null && stats != null)
@@ -187,7 +209,7 @@ public class KikiController : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        if (currentHp <= 0) return;
+        if (currentHp <= 0 || isInvincible) return;
 
         currentHp -= damage;
         Debug.Log($"앗! 키키가 {damage}만큼 맞았다! 남은 피: {currentHp}");
@@ -197,13 +219,28 @@ public class KikiController : MonoBehaviour
             currentHp = 0;
             Die();
         }
+        else
+        {
+            StartCoroutine(InvincibilityRoutine());
+        }
+    }
+
+    private IEnumerator InvincibilityRoutine()
+    {
+        isInvincible = true;
+        yield return new WaitForSeconds(invincibilityDuration);
+        isInvincible = false;
+    }
+
+    public void ApplyKnockback(Vector3 knockbackDir, float force)
+    {
+        velocity = knockbackDir * force + Vector3.up * 2f;
     }
 
     void Die()
     {
         Debug.Log("키키가 쓰러졌습니다... 게임 오버!");
         if (anim != null) anim.SetTrigger("Die");
-
         if (controller != null) controller.enabled = false;
         this.enabled = false;
     }
@@ -229,7 +266,6 @@ public class KikiController : MonoBehaviour
                 isAttack = true;
             }
 
-            // ▼▼▼ [수정된 부분: 각 스킬 입력 시 쿨타임(Timer) 체크 및 초기화] ▼▼▼
             if (Input.GetKeyDown(KeyCode.X) && xSkillTimer <= 0)
             {
                 anim.SetTrigger("doSkill");
@@ -270,7 +306,6 @@ public class KikiController : MonoBehaviour
                     Instantiate(vSkillEffectPrefab, spawnPos, transform.rotation);
                 }
             }
-            // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
             if (isAttack)
             {
@@ -279,6 +314,7 @@ public class KikiController : MonoBehaviour
         }
     }
 
+    // ★★★ [중요] 기존 코드와 똑같이 원상복구 했습니다! ★★★
     public void AnimEvent_EnableSword(float multiplier)
     {
         if (swordWeapon != null)
@@ -307,7 +343,6 @@ public class KikiController : MonoBehaviour
         if (footWeapon != null) footWeapon.DisableCollider();
     }
 
-    // ▼▼▼ [수정된 부분] PlayerPrefs 대신 매니저의 스위치를 켭니다! ▼▼▼
     public void UpgradeXSkill()
     {
         isXSkillUpgraded = true;
@@ -315,9 +350,9 @@ public class KikiController : MonoBehaviour
         {
             GameManager.Instance.isXSkillUpgraded = true;
         }
-        Debug.Log("땅 후려찍기(X) 스킬 강화 완료!! 거대 이펙트 장전!");
+        Debug.Log("땅 후려찍기(X) 스킬 강화 완료!!");
     }
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
     public void SpawnXSkillEffect()
     {
         if (isXSkillUpgraded && xSkillEffectPrefab != null)

@@ -9,14 +9,24 @@ public class GameManager : MonoBehaviour
     [Header("인벤토리 데이터 금고")]
     public StandardStashViewData PlayerInventory;
 
-    // ▼▼▼ [이 부분이 반드시 있어야 합니다!] ▼▼▼
     [Header("--- [스킬 해금 상태 관리] ---")]
-    public bool isXSkillUpgraded = false; // 맵 2: 비석 완료 시 true
-    public bool isVSkillUpgraded = false; // 맵 2: 미미 & 매직스톤 완료 시 true
-    public bool isAuraUnlocked = false;   // 맵 3: 소녀 NPC 퀘스트 완료 시 true (검기)
+    public bool isXSkillUpgraded = false;
+    public bool isVSkillUpgraded = false;
+    public bool isAuraUnlocked = false;
 
     [Header("--- [퀘스트 진행 아이템] ---")]
-    public bool hasMagicItem = false;     // 미미에게 받은 마법의 파편 보유 여부
+    public bool hasMagicItem = false;
+
+    // ★★★ [신규 기능] 히든 스코어 시스템 ★★★
+    [Header("--- [히든 스코어] ---")]
+    public int totalScore = 0; // 플레이어는 모르는 점수
+
+    public void AddScore(int score)
+    {
+        totalScore += score;
+        Debug.Log($"[히든 스코어] {score}점 획득! (현재 총점: {totalScore})");
+    }
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★
 
     private void Awake()
     {
@@ -25,11 +35,11 @@ public class GameManager : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // ★ [핵심] 맵1에서 시작할 때 모든 스킬 강제 잠금! (검기 버그 원천 차단)
             isXSkillUpgraded = false;
             isVSkillUpgraded = false;
             isAuraUnlocked = false;
             hasMagicItem = false;
+            totalScore = 0; // 점수 초기화
 
             PlayerPrefs.DeleteKey("XSkillUpgraded");
             PlayerInventory = new StandardStashViewData(8, 16);
@@ -53,6 +63,5 @@ public class GameManager : MonoBehaviour
     {
         int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
         if (nextSceneIndex < SceneManager.sceneCountInBuildSettings) SceneManager.LoadScene(nextSceneIndex);
-        else Debug.Log("마지막 스테이지입니다!");
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.UI; // UI 필요시
 
 public class BossAI : MonoBehaviour
 {
@@ -12,6 +13,9 @@ public class BossAI : MonoBehaviour
     [Header("맨손 판정 설정 (뼈 연결)")]
     public Collider leftHandCollider;
     public Collider rightHandCollider;
+
+    [Header("★ 보스 죽으면 열릴 포탈 (꼭 연결하세요!)")]
+    public GameObject portalToMap5;
 
     private BossPunch leftPunch;
     private BossPunch rightPunch;
@@ -27,18 +31,14 @@ public class BossAI : MonoBehaviour
     private bool isEvading = false;
     private bool isRunningState = false;
 
-    // 다단히트 방지용 타이머
     private float lastHitTime = 0f;
-
     private float[] skillTimers = new float[5];
     private float strafeLeftTimer = 0f;
     private float strafeRightTimer = 0f;
     private float walkBackTimer = 0f;
 
-    // 평소에는 1배, 페이즈 2가 되면 data에서 배율을 가져와서 곱할 변수
     private float phaseDamageMultiplier = 1f;
 
-    // ★ [수정 완료] 시작 시 0.5초 대기해서 애니메이션 꼬임 완벽 방지
     IEnumerator Start()
     {
         anim = GetComponent<Animator>();
@@ -57,6 +57,9 @@ public class BossAI : MonoBehaviour
         if (leftHandCollider) leftHandCollider.enabled = false;
         if (rightHandCollider) rightHandCollider.enabled = false;
         anim.SetInteger("Phase", 1);
+
+        // 포탈은 처음에 숨기기
+        if (portalToMap5 != null) portalToMap5.SetActive(false);
 
         isStunned = true;
         yield return new WaitForSeconds(0.5f);
@@ -184,12 +187,12 @@ public class BossAI : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        // 다단히트 완벽 방어
         if (Time.time < lastHitTime + 0.1f) return;
         lastHitTime = Time.time;
 
         if (isDead) return;
         currentHp -= damage;
+        Debug.Log("보스 남은 체력: " + currentHp);
 
         if (currentPhase == 1 && currentHp <= data.phase2Threshold) { StartCoroutine(ChangePhaseRoutine()); return; }
         if (currentHp <= 0) { Die(); return; }
@@ -200,44 +203,34 @@ public class BossAI : MonoBehaviour
         else if (damage >= data.stunThresholdSmall) StartCoroutine(StunRoutine(1, data.stunTimeSmall));
     }
 
-    // ★ [수정 완료] 맞은 후 강시처럼 미끄러지는 버그 해결
     IEnumerator StunRoutine(int hitType, float stunTime)
     {
         isStunned = true;
         agent.isStopped = true;
-
         isRunningState = false;
         anim.ResetTrigger("doRun");
-
         anim.SetInteger("HitType", hitType);
         anim.SetTrigger("doHit");
-
         yield return new WaitForSeconds(stunTime);
-
         isStunned = false;
         agent.isStopped = false;
     }
 
-    // ★ [수정 완료] 페이즈 변신 후 미끄러짐 방지 및 체력 풀회복
     IEnumerator ChangePhaseRoutine()
     {
         currentPhase = 2;
         anim.SetInteger("Phase", 2);
         isStunned = true;
         agent.isStopped = true;
-
         isRunningState = false;
         anim.ResetTrigger("doRun");
-
         anim.SetTrigger("doRage");
 
         currentHp = data.maxHp;
-
         phaseDamageMultiplier = data.phase2DamageMultiplier;
 
         float sizeMult = data.phase2SizeMultiplier;
         transform.localScale *= sizeMult;
-
         agent.stoppingDistance *= sizeMult;
         agent.speed *= data.phase2SpeedMultiplier;
 
@@ -245,12 +238,33 @@ public class BossAI : MonoBehaviour
         if (rightPunch) rightPunch.hitRadius *= sizeMult;
 
         yield return new WaitForSeconds(3.0f);
-
         isStunned = false;
         agent.isStopped = false;
-
         Debug.Log($"🔥 마왕 페이즈 2 진입! 체력 {currentHp}으로 완전 회복 및 스탯 강화 완료!");
     }
 
-    void Die() { isDead = true; agent.isStopped = true; anim.SetBool("isDead", true); }
+    void Die()
+    {
+        isDead = true;
+        agent.isStopped = true;
+        anim.SetBool("isDead", true);
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.AddScore(50);
+        }
+
+        Debug.Log("보스 사망! 3초 뒤 포탈 생성...");
+        Invoke("CleanUpAndSpawnPortal", 3.0f);
+    }
+
+    void CleanUpAndSpawnPortal()
+    {
+        if (portalToMap5 != null)
+        {
+            portalToMap5.SetActive(true);
+            Debug.Log("Map5로 가는 포탈 생성됨!");
+        }
+        gameObject.SetActive(false);
+    }
 }
