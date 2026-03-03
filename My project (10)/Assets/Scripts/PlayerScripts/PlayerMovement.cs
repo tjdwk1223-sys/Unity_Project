@@ -10,6 +10,7 @@ public class KikiController : MonoBehaviour
 
     [Header("--- 광역 스킬(AoE) 설정 ---")]
     public float aoeRadius = 5.0f;
+    private bool isVSkillActive = false;
 
     // ★★★ [여기만 수정됨] V스킬 강화 시 보스에게 1000 데미지 ★★★
     public void AnimEvent_AoEAttack(float multiplier)
@@ -293,20 +294,21 @@ public class KikiController : MonoBehaviour
                 isAttack = true;
                 fSkillTimer = fSkillData != null ? fSkillData.cooldownTime : 5f;
             }
-
             if (Input.GetKeyDown(KeyCode.V) && vSkillTimer <= 0)
             {
+                isVSkillActive = true; // ★ [추가] "나 V스킬 쓴다!" 스위치 ON
+
                 anim.SetTrigger("doSkill5");
                 isAttack = true;
                 vSkillTimer = vSkillData != null ? vSkillData.cooldownTime : 5f;
 
+                // (이펙트 생성 코드는 그대로 두세요)
                 if (GameManager.Instance != null && GameManager.Instance.isVSkillUpgraded && vSkillEffectPrefab != null)
                 {
                     Vector3 spawnPos = vSkillImpactPoint != null ? vSkillImpactPoint.position : transform.position;
                     Instantiate(vSkillEffectPrefab, spawnPos, transform.rotation);
                 }
             }
-
             if (isAttack)
             {
                 lastAttackTime = Time.time;
@@ -315,11 +317,23 @@ public class KikiController : MonoBehaviour
     }
 
     // ★★★ [중요] 기존 코드와 똑같이 원상복구 했습니다! ★★★
+    // ★★★ [수정됨] 검 공격력 설정 부분 ★★★
     public void AnimEvent_EnableSword(float multiplier)
     {
         if (swordWeapon != null)
         {
-            swordWeapon.currentDamage = Mathf.RoundToInt(currentBaseDamage * multiplier);
+            // 1. 기본 데미지 계산
+            int finalDamage = Mathf.RoundToInt(currentBaseDamage * multiplier);
+
+            // 2. [핵심] 스위치가 켜져있고 + 강화된 상태면 -> 무조건 1000 데미지!
+            if (isVSkillActive && GameManager.Instance != null && GameManager.Instance.isVSkillUpgraded)
+            {
+                finalDamage = 1000;
+                Debug.Log("⚡ [KikiController] V스킬 발동! 무기 데미지를 1000으로 설정!");
+            }
+
+            // 3. 무기에 최종 데미지 주입
+            swordWeapon.currentDamage = finalDamage;
             swordWeapon.EnableCollider();
         }
     }
@@ -327,8 +341,10 @@ public class KikiController : MonoBehaviour
     public void AnimEvent_DisableSword()
     {
         if (swordWeapon != null) swordWeapon.DisableCollider();
-    }
 
+        // ★ [추가] 공격 끝났으니 스위치 끄기
+        isVSkillActive = false;
+    }
     public void AnimEvent_EnableFoot(float multiplier)
     {
         if (footWeapon != null)

@@ -34,10 +34,13 @@ public class WeaponController : MonoBehaviour
             mimi.TakeDamage(currentDamage);
         }
 
-        // 3. [신규 기능] 보스 피격 + V스킬 강화 코드
+        // 3. [수정됨] 보스 피격 + V스킬 강화 코드
         BossAI boss = other.GetComponent<BossAI>();
         if (boss != null)
         {
+            // 기본적으로는 무기의 현재 데미지를 사용
+            int finalDamage = currentDamage;
+
             // V 스킬 강화 상태인지 체크
             if (GameManager.Instance != null && GameManager.Instance.isVSkillUpgraded && playerController != null)
             {
@@ -45,13 +48,16 @@ public class WeaponController : MonoBehaviour
                 Animator pAnim = playerController.GetComponent<Animator>();
                 if (pAnim != null && pAnim.GetCurrentAnimatorStateInfo(0).IsName("Skill5"))
                 {
-                    // V스킬로 때렸을 때 점수 추가 (선택 사항)
+                    // ★★★ [핵심 수정] 데미지를 1000으로 덮어씌움! ★★★
+                    finalDamage = 1000;
+
                     GameManager.Instance.AddScore(10);
-                    Debug.Log("⚡ V 스킬로 보스 타격! 점수 획득!");
+                    Debug.Log("⚡ [검 타격] 전설의 V 스킬! 보스에게 1000 데미지!");
                 }
             }
-            // 보스에게 대미지 전달
-            boss.TakeDamage(currentDamage);
+
+            // 결정된 데미지(일반 or 1000)를 전달
+            boss.TakeDamage(finalDamage);
         }
     }
 }

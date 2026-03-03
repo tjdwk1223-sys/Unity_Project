@@ -25,7 +25,9 @@ public class NPCQuest : MonoBehaviour
     private bool isTalking = false;
 
     void Start()
+
     {
+
         if (dialoguePanel != null) dialoguePanel.SetActive(false);
         if (portalEffect != null) portalEffect.SetActive(false);
     }

@@ -257,14 +257,22 @@ public class BossAI : MonoBehaviour
         Debug.Log("보스 사망! 3초 뒤 포탈 생성...");
         Invoke("CleanUpAndSpawnPortal", 3.0f);
     }
-
     void CleanUpAndSpawnPortal()
     {
         if (portalToMap5 != null)
         {
+            // 1. [추가] 포탈의 위치를 보스의 현재 위치(죽은 자리)로 이동
+            portalToMap5.transform.position = this.transform.position;
+
+            // 2. [중요] 포탈을 보스 자식에서 해방 (보스가 사라져도 남게 함)
+            portalToMap5.transform.SetParent(null);
+
+            // 3. 포탈 활성화
             portalToMap5.SetActive(true);
-            Debug.Log("Map5로 가는 포탈 생성됨!");
+            Debug.Log($"보스가 죽은 위치({transform.position})에 포탈 생성 완료!");
         }
+
+        // 보스 오브젝트 비활성화
         gameObject.SetActive(false);
     }
 }
