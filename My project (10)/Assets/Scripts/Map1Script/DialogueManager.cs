@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement; // 씬 확인을 위해 필수!
 
 public class DialogueManager : MonoBehaviour
 {
@@ -21,34 +22,50 @@ public class DialogueManager : MonoBehaviour
     public float typingSpeed = 0.05f;
     private bool isTyping = false;
     public bool isDialogueActive = false;
-
-    // ★ [막타 방어] 대화가 시작된 '그 순간'의 프레임을 기억합니다.
     private int startFrame = -1;
 
-    void Start()
+    // ★★★ [여기서부터 중요!] 씬이 바뀔 때마다 감시합니다 ★★★
+    void OnEnable()
     {
-        // ★ [새로 추가] 대화창 패널이 안 채워져 있다면, 에러 내지 말고 그냥 아무것도 하지 마!
-        if (dialoguePanel == null)
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    // 씬 로딩이 끝날 때마다 이 함수가 자동으로 실행됩니다!
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // ★ 0번(오프닝)이나 엔딩씬이면 대화창 끄기
+        if (scene.buildIndex == 0 || scene.name == "EndingScene")
         {
+            if (dialoguePanel != null) dialoguePanel.SetActive(false);
             return;
         }
 
-        if (openingSentences != null && openingSentences.Length > 0)
+        // ★ 1번(Map1)에 도착했을 때만 오프닝 대사 시작!
+        if (scene.buildIndex == 1) // 빌드 세팅의 Map1 번호가 1번이어야 합니다
         {
-            StartDialogue(openingSentences);
+            if (openingSentences != null && openingSentences.Length > 0)
+            {
+                StartDialogue(openingSentences);
+            }
         }
-        else
-        {
-            dialoguePanel.SetActive(false);
-        }
+    }
+
+    void Start()
+    {
+        // Start에서는 아무것도 안 해도 됩니다. (OnSceneLoaded가 대신 해줌)
+        if (dialoguePanel != null) dialoguePanel.SetActive(false);
     }
 
     void Update()
     {
-        // ★ [수정] 대화가 시작된 '그 프레임(startFrame)'에는 E키가 눌려도 넘기지 않습니다.
-        // 이렇게 해야 매직스톤의 E와 매니저의 E가 겹치지 않습니다.
         if (isDialogueActive && Time.frameCount > startFrame)
         {
+            // 마우스 클릭, 스페이스바, E키 모두 넘기기 가능
             if (Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.E))
             {
                 NextSentence();
@@ -58,17 +75,16 @@ public class DialogueManager : MonoBehaviour
 
     public void StartDialogue(string[] newSentences)
     {
-        // ★ [이 한 줄을 추가하세요] 대사가 비어있으면 아예 시작을 안 하게 합니다.
         if (newSentences == null || newSentences.Length == 0) return;
-
         if (dialoguePanel == null) return;
-        // 대화 시작 시 현재 프레임 번호를 딱 찍어둡니다.
-        startFrame = Time.frameCount;
 
+        startFrame = Time.frameCount;
         currentSentences = newSentences;
         currentSentenceIndex = 0;
         dialoguePanel.SetActive(true);
         isDialogueActive = true;
+
+        StopAllCoroutines(); // 혹시 꼬일까봐 초기화
         StartCoroutine(TypeSentence(currentSentences[currentSentenceIndex]));
     }
 
